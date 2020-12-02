@@ -107,7 +107,16 @@ read_message (const fence_kdump_node_t *node, void *msg, int len)
 
     error = strcasecmp (node->addr, addr);
     if (error != 0) {
-        log_debug (1, "discard message from '%s'\n", addr);
+        if (node->altname != NULL) {
+	    error = strcasecmp (node->altname, addr);
+	    if (error == 0 ) {
+                log_debug (0, "received message from '%s'\n", node->altname);
+	    } else {
+                log_debug (1, "discard altname message from '%s','%s'\n", addr, node->altname);
+	    }
+	} else {
+            log_debug (1, "discard message from '%s'\n", addr);
+	}
     }
 
 out:
@@ -234,6 +243,14 @@ do_action_metadata (const char *self)
              "the \"off\" action.");
     fprintf (stdout, "\t</parameter>\n");
 
+    fprintf (stdout, "\t<parameter name=\"altnodename\" unique=\"0\" required=\"0\">\n");
+    fprintf (stdout, "\t\t<getopt mixed=\"-a, --altnodename=NODE\" />\n");
+    fprintf (stdout, "\t\t<content type=\"string\" />\n");
+    fprintf (stdout, "\t\t<shortdesc lang=\"en\">%s</shortdesc>\n",
+             "Alternative IP address of node to be fenced. This option is required for\n"
+             "the \"off\" action.");
+    fprintf (stdout, "\t</parameter>\n");
+
     fprintf (stdout, "\t<parameter name=\"ipport\" unique=\"0\" required=\"0\">\n");
     fprintf (stdout, "\t\t<getopt mixed=\"-p, --ipport=PORT\" />\n");
     fprintf (stdout, "\t\t<content type=\"string\" default=\"7410\" />\n");
@@ -313,6 +330,8 @@ print_usage (const char *self)
     fprintf (stdout, "%s\n",
              "  -n, --nodename=NODE          Name or IP address of node to be fenced");
     fprintf (stdout, "%s\n",
+             "  -a, --altnodename=NODE       Name or IP address of RRP node to be fenced");
+    fprintf (stdout, "%s\n",
              "  -p, --ipport=PORT            IP port number (default: 7410)");
     fprintf (stdout, "%s\n",
              "  -f, --family=FAMILY          Network family: ([auto], ipv4, ipv6)");
@@ -353,6 +372,7 @@ get_options_node (fence_kdump_opts_t *opts)
     hints.ai_flags = AI_NUMERICSERV;
 
     strncpy (node->name, opts->nodename, sizeof (node->name) - 1);
+    strncpy (node->altname, opts->altnodename, sizeof (node->altname) - 1);
     snprintf (node->port, sizeof (node->port), "%d", opts->ipport);
 
     node->info = NULL;
@@ -414,6 +434,7 @@ get_options (int argc, char **argv, fence_kdump_opts_t *opts)
 
     struct option options[] = {
         { "nodename", required_argument, NULL, 'n' },
+        { "altnodename", optional_argument, NULL, 'a' },
         { "ipport",   required_argument, NULL, 'p' },
         { "family",   required_argument, NULL, 'f' },
         { "action",   required_argument, NULL, 'o' },
@@ -424,10 +445,13 @@ get_options (int argc, char **argv, fence_kdump_opts_t *opts)
         { 0, 0, 0, 0 }
     };
 
-    while ((opt = getopt_long (argc, argv, "n:p:f:o:t:v::Vh", options, NULL)) != EOF) {
+    while ((opt = getopt_long (argc, argv, "a:n:p:f:o:t:v::Vh", options, NULL)) != EOF) {
         switch (opt) {
         case 'n':
             set_option_nodename (opts, optarg);
+            break;
+        case 'a':
+            set_option_altnodename (opts, optarg);
             break;
         case 'p':
             set_option_ipport (opts, optarg);
@@ -487,6 +511,10 @@ get_options_stdin (fence_kdump_opts_t *opts)
 
         if (!strcasecmp (opt, "nodename")) {
             set_option_nodename (opts, arg);
+            continue;
+        }
+        if (!strcasecmp (opt, "altnodename")) {
+            set_option_altnodename (opts, arg);
             continue;
         }
         if (!strcasecmp (opt, "ipport")) {

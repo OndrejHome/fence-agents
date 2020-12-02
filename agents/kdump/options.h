@@ -55,6 +55,7 @@ enum {
 
 typedef struct fence_kdump_opts {
     char *nodename;
+    char *altnodename;
     int ipport;
     int family;
     int action;
@@ -67,6 +68,7 @@ typedef struct fence_kdump_opts {
 
 typedef struct fence_kdump_node {
     char name[FENCE_KDUMP_NAME_LEN];
+    char altname[FENCE_KDUMP_NAME_LEN];
     char addr[FENCE_KDUMP_ADDR_LEN];
     char port[FENCE_KDUMP_PORT_LEN];
     int socket;
@@ -92,6 +94,7 @@ print_node (const fence_kdump_node_t *node)
 {
     fprintf (stdout, "[debug]: node {       \n");
     fprintf (stdout, "[debug]:     name = %s\n", node->name);
+    fprintf (stdout, "[debug]:  altname = %s\n", node->altname);
     fprintf (stdout, "[debug]:     addr = %s\n", node->addr);
     fprintf (stdout, "[debug]:     port = %s\n", node->port);
     fprintf (stdout, "[debug]:     info = %p\n", node->info);
@@ -102,6 +105,7 @@ static inline void
 init_options (fence_kdump_opts_t *opts)
 {
     opts->nodename = NULL;
+    opts->altnodename = NULL;
     opts->ipport   = FENCE_KDUMP_DEFAULT_IPPORT;
     opts->family   = FENCE_KDUMP_DEFAULT_FAMILY;
     opts->action   = FENCE_KDUMP_DEFAULT_ACTION;
@@ -134,6 +138,7 @@ print_options (fence_kdump_opts_t *opts)
 
     fprintf (stdout, "[debug]: options {        \n");
     fprintf (stdout, "[debug]:     nodename = %s\n", opts->nodename);
+    fprintf (stdout, "[debug]:  altnodename = %s\n", opts->altnodename);
     fprintf (stdout, "[debug]:     ipport   = %d\n", opts->ipport);
     fprintf (stdout, "[debug]:     family   = %d\n", opts->family);
     fprintf (stdout, "[debug]:     count    = %d\n", opts->count);
@@ -155,6 +160,16 @@ set_option_nodename (fence_kdump_opts_t *opts, const char *arg)
     }
 
     opts->nodename = strdup (arg);
+}
+
+static inline void
+set_option_altnodename (fence_kdump_opts_t *opts, const char *arg)
+{
+    if (opts->altnodename != NULL) {
+        free (opts->altnodename);
+    }
+
+    opts->altnodename = strdup (arg);
 }
 
 static inline void
